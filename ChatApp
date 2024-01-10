@@ -1,0 +1,459 @@
+#!/usr/bin/env python3
+import socket
+import json
+import sys
+import threading
+import time
+from datetime import datetime
+
+# Constants for message types, might be used for parsing message purposes
+MSG_TYPE_REG = 'reg'
+MSG_TYPE_DEREG = 'dereg'
+MSG_TYPE_SEND = 'sed'# different from send_all so don't use send
+MSG_TYPE_ACK = 'ack'
+MSG_TYPE_SEND_ALL = 'send_all'
+MSG_TYPE_SYN = 'syn'
+MSG_TYPE_SYS_INFO = 'sys' #information from system
+MSG_TYPE_OFF_LINE = 'off' 
+MSG_CHECK_ALIVE ='check_alive'
+NULL_NICKname = '**'
+NULL_ADDress = 'NO ADDRESS'
+PROMPT='>>>'
+
+class ChatServer:
+    def __init__(self, port):
+        if not (1024 <= port <= 65535):
+            raise ValueError("Invalid server port. Port number should be between 1024 and 65535.")
+        self.name = 'Server'
+        self.port = port
+        self.clients = {}  #  client table
+        self.offlineMSGs={}
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.server_socket.bind(('', self.port)) #not bind to local host
+        self.ACKbuffer={}#used to save ack, most time used for time our ,see readme for detail
+            
+    def start(self):
+        print(PROMPT+f"UDP Server listening on port {self.port}")
+        thread = threading.Thread(target=self.receive_messages)
+        thread.daemon = True# end when server ends
+        thread.start()
+        while True:
+          continue
+                
+    def receive_messages(self):#use thread structure to make receive very fast(less loss)
+        while True:
+            message, client_address = self.server_socket.recvfrom(2048)
+            message = message.decode('utf-8')
+            print(PROMPT+f"Received message from {client_address}: {message}")
+            
+            if message.startswith(MSG_TYPE_REG):#classify message and throw to different thread to handle
+                client_name = message.split('\'')[1]
+                threading.Thread(target=self.handle_registration, args=(client_name, client_address)).start()
+
+            elif message.startswith(MSG_TYPE_DEREG):
+                client_name = message.split('\'')[1]
+                threading.Thread(target=self.handle_deregistration, args=(client_name, client_address)).start()
+            
+            elif message.startswith(MSG_TYPE_OFF_LINE):
+                threading.Thread(target=self.handle_offline, args=(message,client_address)).start()
+            
+            elif message.startswith(MSG_TYPE_SEND_ALL):
+                threading.Thread(target=self.handle_groupchat, args=(message,client_address)).start()
+            
+            elif message.startswith(MSG_TYPE_ACK):
+                name = message[3:]
+                self.ACKbuffer[client_address] = name
+                
+
+    def handle_registration(self, client_name,client_address):
+        client_id=(client_name,client_address)
+
+        if client_id not in self.clients:#new client
+            if self.get_address_by_name(client_name)!= NULL_ADDress:
+                self.send_message_to_client_byaddress(MSG_TYPE_SYS_INFO+"[Sorry but this name is used by other clients.]", client_address)
+                return
+            self.clients[client_id] = True
+            self.send_message_to_client_byaddress(MSG_TYPE_SYS_INFO+"[Welcome, You are registered.]", client_address)
+            self.send_ACK(client_address)#this is to inform that the client is successfully registered as a new client
+            self.broadcastsyn()
+            message=PROMPT+f"Client {client_id}registered and table updated"
+            print("table",self.clients)
+            print(message)
+
+        elif self.clients[client_id] ==True:#old client come back(not deregged,may silent leave)
+            
+            self.clients[client_id] = True
+            self.send_message_to_client_byaddress(MSG_TYPE_SYS_INFO+"sys[Welcome back]", client_address)
+            self.send_ACK(client_address)
+            self.broadcastsyn()
+            message=PROMPT+f"Client {client_id} back and table updated in case some error."
+            print(message)
+
+        elif self.clients[client_id] ==False:#deregged client reg again
+            print(PROMPT+f"Client {client_id} is online")
+            self.clients[client_id] = True
+            if client_name in self.offlineMSGs and len(self.offlineMSGs[client_name]):# Starting to pull offline messages
+                self.send_message_to_client_byaddress(MSG_TYPE_SYS_INFO+"[You have offline messages:]", client_address)
+                for (tm, msg, Sender) in self.offlineMSGs[client_name]:
+                    message=f"{Sender}:{tm} {msg}"
+                    self.ACKbuffer[client_address]=NULL_NICKname #start time out for every message. buffer open first and wait for ack
+                    self.send_message_to_client_byaddress(MSG_TYPE_SYS_INFO+f"{message}", client_address)#****
+                    time.sleep(0.01)
+                    if self.ACKbuffer[client_address]==client_name:
+                        ACK_message=f"[Offline Message sent at {tm} received by {client_name}.]"
+                        if not Sender.startswith("Group Chat") : #no need to retell sender group chat is sent. This is to tell other senders their previous message is sent
+                            if Sender == "Server":# This is when receiver rereg and sender is offline.When sender is back, it recieve offline message from Server.
+                                continue #do nothing in this case.The **** line already send 
+                            Sender_address=self.get_address_by_name(Sender)
+                            if(self.clients[(Sender,Sender_address)]): #Sender is Online
+                                self.send_message_to_client_byname(MSG_TYPE_SYS_INFO+f"{ACK_message}", Sender)
+                            else:#Sender is Offline
+                                 tt=datetime.now().replace(microsecond=0)
+                                 self.offlineMSGs.setdefault(Sender, []).append((tt, ACK_message, "Server"))
+                        self.ACKbuffer[client_address]=NULL_NICKname
+                del self.offlineMSGs[client_name]
+            self.broadcastsyn()
+            message=PROMPT+f"Client {client_id} registered again and table updated."
+            print("table",self.clients)
+            print(message)
+            
+    def handle_deregistration(self,client_name,client_address):
+            client_id=(client_name,client_address)
+            self.clients[client_id] =False
+            self.send_ACK(client_address)
+            self.broadcastsyn()
+            message=PROMPT+f"Client {client_id} deregistered and table updated."
+            print("table",self.clients)
+            print(message)
+
+    def handle_offline(self,message,client_address):
+        #check alive
+        [_,Receiver,Sender,tm,msg]=message.split('+')
+        Receiver_address=self.get_address_by_name(Receiver)
+        if self.clients[(Receiver,Receiver_address)]:#sender thought is offline but This server is alive in server's table
+            self.ACKbuffer[Receiver_address]=NULL_NICKname# this buffer logic is to solve timeout
+            self.send_message_to_client_byaddress(MSG_CHECK_ALIVE, Receiver_address)
+            time.sleep(0.1)
+            if self.ACKbuffer[Receiver_address]==Receiver:
+                self.clients[Receiver_address]=True
+                self.broadcastsyn()#syn table
+                self.send_message_to_client_byaddress(f"{MSG_TYPE_SYS_INFO}[Client <nick-name> exists!!]", client_address)
+            self.ACKbuffer[Receiver_address]=NULL_NICKname
+            return
+
+        self.offlineMSGs.setdefault(Receiver, []).append((tm, msg, Sender))
+        print(PROMPT+"store offline msg",self.offlineMSGs[Receiver])
+        self.send_ACK(client_address)
+            
+    def handle_groupchat(self,message,client_address):
+        sender=self.get_name_by_address(client_address)
+        #if sender == NULL_NICKname:# identify sender #this part is for sender identification, not used because I want to allow old users to use ** name.Also no need if server never shut down.
+        #   print("UNKNOWN CLIENT,NEGELECT")
+        self.send_ACK(client_address) # ack sender
+        msg=MSG_TYPE_SYS_INFO+f"Group Chat {sender}: {message.split('+')[1]}"
+        tm=datetime.now().replace(microsecond=0) #used to store offline msg. set here to keep consistence in offline msgs for different client.
+        Sender=f"Group Chat {sender}"
+        for (name,address) in self.clients:
+            if name ==sender:#skip sender itself
+                continue
+            if self.clients[(name,address)]==False: #this client is offline, save as offline msg.
+                self.offlineMSGs.setdefault(name, []).append((tm, msg, Sender))
+            elif self.clients[(name,address)]: #this is online
+                self.ACKbuffer[address]=NULL_NICKname
+                self.send_message_to_client_byaddress(msg,address)
+                time.sleep(0.01)
+                if self.ACKbuffer[address]==name:
+                    print(PROMPT+f"send to {name} successfully")
+                else:
+                    self.offlineMSGs.setdefault(name, []).append((tm, msg, Sender))
+            else:
+                pass
+
+
+    def send_message_to_client_byaddress(self, message, client_address):
+        self.server_socket.sendto(message.encode('utf-8'), client_address)
+    
+    def send_message_to_client_byname(self, message, nickname):
+        client_address=self.get_address_by_name(nickname)
+        self.server_socket.sendto(message.encode('utf-8'), client_address)
+    
+    def get_address_by_name(self,nickname):
+        for(name,address) in self.clients:
+            if nickname==name:
+                return address
+        print('Address not used Before!')
+        return NULL_ADDress
+    
+    def get_name_by_address(self,clientaddress):
+        for(name,address) in self.clients:
+            if address==clientaddress:
+                return name
+        print('name not find in table!')
+        return NULL_NICKname
+    
+    def send_ACK(self,client_address):
+        message=MSG_TYPE_ACK+self.name
+        self.server_socket.sendto(message.encode('utf-8'), client_address)
+
+    def synstate_to_client(self,client_address):#update only one client's table
+        client_state = {str(k): v for k, v in self.clients.items()}
+        message = json.dumps(client_state)
+        self.server_socket.sendto(f"syn{message}".encode('utf-8'), client_address)
+
+    def broadcastsyn(self):#update all clients table. I used this only. (since one client need to update, it's likely others also need update)
+        for client_id in self.clients:
+            if(self.clients[client_id]==False):# do not update offline users
+                continue
+            client_address=client_id[1]
+            self.synstate_to_client(client_address)
+
+
+
+class ChatClient:
+    def __init__(self, name, server_ip, server_port,client_port):
+        if not (1024 <= server_port <= 65535):#check IP and Port
+            raise ValueError("Invalid server port. Port number should be between 1024 and 65535.")
+        if not (1024 <= client_port <= 65535):
+            raise ValueError("Invalid client port. Port number should be between 1024 and 65535.")
+
+        try:
+            socket.inet_pton(socket.AF_INET, server_ip)
+        except socket.error:
+            raise ValueError("Invalid server IP address.")
+        self.name = name
+        self.server_ip = server_ip
+        self.server_port = server_port
+        self.client_port = client_port
+        self.clients = {}
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.client_socket.bind(('', self.client_port))
+        self.ACKbuffer={}
+        self.state=True #True means registered,False means offline(deregistered)
+
+    def start(self):
+
+        self.server_address = (self.server_ip, self.server_port)
+        # Send a registration message to the server
+        thread = threading.Thread(target=self.receive_messages)
+        thread.daemon = True
+        thread.start()
+        time.sleep(1) #wait for thread to start, essential in google cloud, no need for local use.
+        self.ACKbuffer[self.server_address]=NULL_NICKname #clear buffer every time before use
+        self.send_message(f"reg {self.name,client_port}",self.server_address)
+        time.sleep(1) #wait longer for server to process reg information.
+        if(self.ACKbuffer[self.server_address]==NULL_NICKname):
+            print(">>>Sorry, the registriation is failed,change your nickname or check connenction")
+            sys.exit()
+        self.ACKbuffer[self.server_address]==NULL_NICKname #clear buffer every time after use
+        try:
+            while True:
+                if self.state== True:#online, different thread for different command.check command first
+                    command = input("") 
+                    if not self.check_command(command):
+                        print(PROMPT+"[Invalid command]")
+                        continue
+                    else:
+                        print(f"{PROMPT}{command}")
+                    if command.startswith("send") and not command.startswith("send_all") :
+                        threading.Thread(target=self.process_sending_client_command(command), args=(command)).start()
+                    
+                    if command.startswith("dereg") :
+                        threading.Thread(target=self.process_dereg_command(command), args=(command)).start()
+                        
+                    if command.startswith("stateconfig"):#never used and not allowed in check_command, just for test. To use it need to modify check_command.
+                        print(PROMPT+"\n"+self.clients)
+
+                    if command.startswith("send_all"):
+                        threading.Thread(target=self.process_sending_all_command(command), args=(command)).start()
+                else:          #off line ,only wait for reg command.
+                    command = input("") 
+                    if not self.check_command(command):
+                        print(PROMPT+"[Invalid command]")
+                        continue
+                    else:
+                        print(f"{PROMPT}{command}")
+                    if(command==MSG_TYPE_REG ):
+                            self.regagain()
+
+        except KeyboardInterrupt:
+            print(PROMPT+"KeyboardInterrupt")
+
+    def check_command(self, command):#check input, return True if legal, else return False and print a help information.
+        valid_active = ('send', 'send_all', 'dereg')
+        valid_idle = ('reg')
+        prefix = command.split(' ')[0]
+        tokens = command.split(' ')
+        if self.state:
+            if prefix in valid_active:
+                if prefix == 'send' and len(tokens) >=3:#this is to limit the input tokens
+                    return True
+                elif prefix == 'send_all' and len(tokens) >=2:
+                    return True
+                elif prefix == 'dereg' and len(tokens) == 1:
+                    return True
+            else:
+                print(PROMPT + f"\valid commends when: registered:{valid_active}, de-registered {valid_idle}")
+        else:
+            if prefix in valid_idle:
+                if prefix == 'reg' and len(tokens) == 1:
+                    return True
+            else:
+                print(PROMPT + f"\valid commends when: registered:{valid_active}, de-registered {valid_idle}")
+        
+        return False
+
+    def send_message(self, message,target_address):#send_message
+        self.client_socket.sendto(message.encode('utf-8'), target_address)
+
+    def send_ACK(self,client_address):#send_ACK
+        message=MSG_TYPE_ACK+self.name
+        if self.state:
+            self.client_socket.sendto(message.encode('utf-8'), client_address)
+
+    def receive_messages(self):#Since no complicate process is needed here and we have a strong ACK buffer,I don't use thread here as server, only print information
+        while True :
+            if self.state==True:
+                message, sender_address = self.client_socket.recvfrom(2048)
+                message=message.decode('utf-8')
+                if self.state and message.startswith("sed"):
+                    name=message.split('+')[1]
+                    msg=message.split('+')[2]
+                    print(f"\n>>>{name}:{msg}")
+                  
+                    self.send_ACK(sender_address)
+                elif self.state and message.startswith("ack"):
+                    name=message[3:]
+                    print(f"{PROMPT}stateinfo:receive ACK from {name}")
+                    self.ACKbuffer[sender_address]=name
+                elif self.state and message.startswith("sys"):
+                    print('\n'+PROMPT+message[3:])
+                    self.send_ACK(sender_address)
+                elif self.state and message.startswith(MSG_CHECK_ALIVE):
+                    self.send_ACK(sender_address)#just to check is alive
+                elif self.state and message.startswith("syn"): 
+                    try:
+                        client_dict = json.loads(message[3:])
+                        client_dict = {self.string_to_tuple(k): v for k, v in client_dict.items()}
+                        print("\n>>>[Client table updated.]")
+                        self.clients= client_dict
+                    except json.JSONDecodeError as e:
+                        print(">>>An error occurred while decoding JSON:", e)
+
+    def process_sending_client_command(self,command):
+        f=False
+        _,name,message = command.split(' ', 2)
+        for (clientname, client_address) in self.clients:
+            if name == clientname:
+                f=True
+                client_state=self.clients[(clientname,client_address)]
+                if client_state:
+                    self.ACKbuffer[client_address]=NULL_NICKname #clear buffer wait for ack before sending
+                    self.send_message(f"sed+{self.name}+{message}", client_address)
+                    time.sleep(0.1) #time out start
+                    if client_address in self.ACKbuffer and self.ACKbuffer[client_address]!=NULL_NICKname:
+                        print(f"\n{PROMPT}[Message received by {self.ACKbuffer[client_address]}.]")
+                     
+                        self.ACKbuffer[client_address]=NULL_NICKname
+                    else:#time for ack out,send offline msg to server,check this sending in process_sending_offline_command()
+                        print(f"\n{PROMPT}[No ACK from {name}, message sent to server.]")
+                        self.process_sending_offline_command(Receiver_name=name,sender_name=self.name,
+                        tm=datetime.now().replace(microsecond=0),msg=message)
+                else:# in self.clients table receiver is offline, send offline message to server
+                    print(f"\n{PROMPT}[{name} is off-line, message sent to server.]")
+                    self.process_sending_offline_command(Receiver_name=name,sender_name=self.name,
+                        tm=datetime.now().replace(microsecond=0),msg=message)
+        if not f :print(f"\n{PROMPT}not find {name}")
+    
+    def process_sending_all_command(self,command):
+        _,message = command.split(' ', 1)
+        for i in range (0,5):#try 5 times for sending all
+            self.ACKbuffer[self.server_address]=NULL_NICKname#clear buffer wait for ack before sending
+            self.send_message(MSG_TYPE_SEND_ALL+f"{self.name}+{message}", self.server_address)
+            time.sleep(0.1)#time out start
+            if self.ACKbuffer[self.server_address]=="Server":
+                print(f"\n{PROMPT}[Group Message received by Server.]")
+                self.ACKbuffer[self.server_address]=NULL_NICKname
+                return
+            
+        print(f"\n{PROMPT}[Server not responding.]")
+        self.ACKbuffer[self.server_address]=NULL_NICKname
+
+    def process_sending_offline_command(self,Receiver_name,sender_name,tm,msg):
+        f=False
+        message=f"{MSG_TYPE_OFF_LINE}+{Receiver_name}+{sender_name}+{tm}+{msg}"
+        self.ACKbuffer[self.server_address]=NULL_NICKname#clear buffer wait for ack before sending
+        self.send_message(message, self.server_address)
+        time.sleep(0.1)#time out start,only try 1 time here cause not required 5 times in pdf. can be modified to 5 times as in send_all
+        if self.ACKbuffer[self.server_address]=='Server':
+            print(f"\n{PROMPT}[Offline Message sent at {tm} received by the server and saved.]")
+        else:
+            print(f"\n{PROMPT}[Offline Message to server failed for no response.]")
+        self.ACKbuffer[self.server_address]=NULL_NICKname
+       
+ 
+         
+    def process_dereg_command(self,command):
+        for i in range (0,5):#try 5 times
+            self.ACKbuffer[self.server_address]=NULL_NICKname
+            self.send_message(f"dereg {self.name,client_port}",self.server_address)
+            time.sleep(0.1)#time out start
+            if self.ACKbuffer[self.server_address]=='Server':
+                print(f"{PROMPT}You are Offline. Bye.")
+                self.state=False
+                break
+            print(f"{PROMPT}try {i+1} times to dereg")
+        
+        if self.state:
+            print("{PROMPT}Server not responding")
+            print("{PROMPT}Existing")
+        self.state=False
+        
+
+    def regagain(self):
+        self.state=True
+        self.send_message(f"reg {self.name,client_port}",self.server_address)#tell server I'm back.
+        #Other information will get from Server.
+
+    def string_to_tuple(self,string_key):#Just a tool for client table, because json will be string after trainsmission.
+        string_key = string_key.strip("()") 
+        name, address = string_key.split(", ", 1)
+        name = name.strip("'")
+        address = address.strip("()")
+        ip, port = address.split(", ")
+        ip = ip.strip("'")
+        port = int(port)
+        tuple=(name, (ip, port))
+        return tuple
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("{PROMPT}Usage: ./ChatApp <mode> [options]")
+        sys.exit(1)
+        
+    mode = sys.argv[1]
+    
+    if mode == '-s':#two different keys.
+        if len(sys.argv) != 3:#this is powerful but hard to use in check_command because we need to consider " " in message.
+            print("{PROMPT}Usage: ./ChatApp -s <port>")
+            sys.exit(1)
+        try:
+            port = int(sys.argv[2])
+            server = ChatServer(port)
+            server.start()
+        except ValueError as e:
+            print(e)
+            sys.exit(1)
+
+    elif mode == '-c':
+        if len(sys.argv) != 6:
+            print("{PROMPT}Usage: ./ChatApp -c <name> <server-ip> <server-port> <client-port>")
+            sys.exit(1)
+        name = sys.argv[2]
+        server_ip = sys.argv[3]
+        server_port = int(sys.argv[4])
+        client_port = int(sys.argv[5])
+        client = ChatClient(name, server_ip, server_port, client_port)
+        client.start()
+        
+    else:
+        print("{PROMPT}[Invalid mode] Mode should be either '-s' for server or '-c' for client.")
+        sys.exit(1)
