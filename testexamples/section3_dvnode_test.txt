@@ -1,0 +1,215 @@
+To run this test, open 4 terminal and run 
+python3 dvnode.py 1111 2222 .1 3333 .5
+python3 dvnode.py 2222 1111 .1 3333 .2 4444 .8
+python3 dvnode.py 3333 1111 .5 2222 .2 4444 .5
+python3 dvnode.py 4444 2222 .8 3333 .5 last
+
+Terminal 1:
+wl2928@csee4119-instance-wl2928:~$ python3 dvnode.py 1111 2222 .1 3333 .5
+Routing Table for Node 1111:
+- (.1) -> Node 2222 
+- (.5) -> Node 3333 
+[1702761864.679561] Message sent from Node 1111 to Node 2222
+[1702761864.67967] Message sent from Node 1111 to Node 3333
+[1702761864.6796947] Message received at Node 1111 from Node 3333
+Routing Table for Node 1111:
+- (.1) -> Node 2222 
+- (.5) -> Node 3333 
+- (1.0) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6799479] Message sent from Node 1111 to Node 2222
+[1702761864.6800148] Message sent from Node 1111 to Node 3333
+[1702761864.6800482] Message received at Node 1111 from Node 2222
+Routing Table for Node 1111:
+- (.1) -> Node 2222 
+- (.3) -> Node 3333 ; Next hop -> Node 2222
+- (.9) -> Node 4444 ; Next hop -> Node 2222
+[1702761864.6802413] Message sent from Node 1111 to Node 2222
+[1702761864.6803064] Message sent from Node 1111 to Node 3333
+[1702761864.6803746] Message received at Node 1111 from Node 3333
+Routing Table for Node 1111:
+- (.1) -> Node 2222 
+- (.3) -> Node 3333 ; Next hop -> Node 2222
+- (.8) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6806352] Message sent from Node 1111 to Node 2222
+[1702761864.6807964] Message sent from Node 1111 to Node 3333
+[1702761864.6808338] Message received at Node 1111 from Node 2222
+Routing Table for Node 1111:
+- (.1) -> Node 2222 
+- (.3) -> Node 3333 ; Next hop -> Node 2222
+- (.8) -> Node 4444 ; Next hop -> Node 2222
+[1702761864.6816924] Message sent from Node 1111 to Node 2222
+[1702761864.6817577] Message sent from Node 1111 to Node 3333
+
+
+Terminal 2:
+wl2928@csee4119-instance-wl2928:~$ python3 dvnode.py 2222 1111 .1 3333 .2 4444 .8
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.8) -> Node 4444 
+[1702761864.6771812] Message sent from Node 2222 to Node 1111
+[1702761864.6772606] Message sent from Node 2222 to Node 3333
+[1702761864.6773033] Message sent from Node 2222 to Node 4444
+[1702761864.6773155] Message received at Node 2222 from Node 4444
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.8) -> Node 4444 
+[1702761864.6774137] Message received at Node 2222 from Node 3333
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6775508] Message sent from Node 2222 to Node 1111
+[1702761864.6776037] Message sent from Node 2222 to Node 3333
+[1702761864.677653] Message sent from Node 2222 to Node 4444
+[1702761864.6776712] Message received at Node 2222 from Node 3333
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6780732] Message received at Node 2222 from Node 4444
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6784742] Message received at Node 2222 from Node 4444
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6791518] Message received at Node 2222 from Node 4444
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6810863] Message received at Node 2222 from Node 1111
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6812098] Message received at Node 2222 from Node 1111
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6813247] Message received at Node 2222 from Node 1111
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6814978] Message received at Node 2222 from Node 1111
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+[1702761864.6818006] Message received at Node 2222 from Node 1111
+Routing Table for Node 2222:
+- (.1) -> Node 1111 
+- (.2) -> Node 3333 
+- (.7) -> Node 4444 ; Next hop -> Node 3333
+
+
+Terminal 3:
+wl2928@csee4119-instance-wl2928:~$ python3 dvnode.py 3333 1111 .5 2222 .2 4444 .5
+Routing Table for Node 3333:
+- (.5) -> Node 1111 
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.677068] Message sent from Node 3333 to Node 1111
+[1702761864.6771605] Message sent from Node 3333 to Node 2222
+[1702761864.6772094] Message sent from Node 3333 to Node 4444
+[1702761864.6772223] Message received at Node 3333 from Node 4444
+Routing Table for Node 3333:
+- (.5) -> Node 1111 
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6773617] Message received at Node 3333 from Node 2222
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6775181] Message sent from Node 3333 to Node 1111
+[1702761864.677569] Message sent from Node 3333 to Node 2222
+[1702761864.6776192] Message sent from Node 3333 to Node 4444
+[1702761864.6776426] Message received at Node 3333 from Node 2222
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6795175] Message received at Node 3333 from Node 4444
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.682066] Message received at Node 3333 from Node 4444
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.682232] Message received at Node 3333 from Node 4444
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6823575] Message received at Node 3333 from Node 1111
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6824408] Message received at Node 3333 from Node 1111
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6825366] Message received at Node 3333 from Node 1111
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6827264] Message received at Node 3333 from Node 1111
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+[1702761864.6828887] Message received at Node 3333 from Node 1111
+Routing Table for Node 3333:
+- (.3) -> Node 1111 ; Next hop -> Node 2222
+- (.2) -> Node 2222 
+- (.5) -> Node 4444 
+
+
+
+Terminal 4:
+wl2928@csee4119-instance-wl2928:~$ python3 dvnode.py 4444 2222 .8 3333 .5 last
+Routing Table for Node 4444:
+- (.8) -> Node 2222 
+- (.5) -> Node 3333 
+[1702761864.6764057] Message sent from Node 4444 to Node 2222
+[1702761864.676501] Message sent from Node 4444 to Node 3333
+[1702761864.677764] Message received at Node 4444 from Node 3333
+Routing Table for Node 4444:
+- (.7) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (1.0) -> Node 1111 ; Next hop -> Node 3333
+[1702761864.6781862] Message sent from Node 4444 to Node 2222
+[1702761864.6782627] Message sent from Node 4444 to Node 3333
+[1702761864.678291] Message received at Node 4444 from Node 2222
+Routing Table for Node 4444:
+- (.7) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.8) -> Node 1111 ; Next hop -> Node 2222
+[1702761864.678654] Message sent from Node 4444 to Node 2222
+[1702761864.678731] Message sent from Node 4444 to Node 3333
+[1702761864.6787627] Message received at Node 4444 from Node 3333
+Routing Table for Node 4444:
+- (.7) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.8) -> Node 1111 ; Next hop -> Node 2222
+[1702761864.678863] Message received at Node 4444 from Node 2222
+Routing Table for Node 4444:
+- (.7) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.8) -> Node 1111 ; Next hop -> Node 2222
+[1702761864.6792939] Message sent from Node 4444 to Node 2222
+[1702761864.6793742] Message sent from Node 4444 to Node 3333

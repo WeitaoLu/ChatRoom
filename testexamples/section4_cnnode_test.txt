@@ -1,0 +1,162 @@
+To run this test, 
+open 4 terminal and use 
+python3 cnnode.py 1111 receive send 2222 3333
+python3 cnnode.py 2222 receive 1111 .1 send 3333 4444
+python3 cnnode.py 3333 receive 1111 .5 2222 .2 send 4444 
+python3 cnnode.py 4444 receive 2222 .8 3333 .5 send last
+
+Some print information may be out of order becasue different thread.
+Both the loss rate and route table converged to section 3 after some time. With aound <=0.1 error
+I used 1 for initialization, which is loss rate =100% indicates not connected.
+Since it's always updating, below is some information after about 600 probe packets were sent
+
+Terminal 1
+[1702762360.977] Link to 3333: 635 packets sent,  333 packets lost, loss rate 0.520
+[1702762361.977] Link to 2222: 545 packets sent,  49 packets lost, loss rate 0.090
+[1702762362.978] Link to 3333: 645 packets sent,  337 packets lost, loss rate 0.520
+[1702762362.978712] Message sent from Node 1111 to Node 2222
+[1702762362.9788067] Message sent from Node 1111 to Node 3333
+[1702762362.979] Link to 2222: 550 packets sent,  50 packets lost, loss rate 0.090
+[1702762362.9792328] Message sent from Node 1111 to Node 2222
+[1702762362.9793384] Message sent from Node 1111 to Node 3333
+[1702762362.979] Link to 3333: 645 packets sent,  337 packets lost, loss rate 0.520
+[1702762363.170682] Message received at Node 1111 from Node 2222
+Routing Table for Node 1111:
+- (.09) -> Node 2222 
+- (.26) -> Node 3333 ; Next hop -> Node 2222
+- (.88) -> Node 4444 ; Next hop -> Node 2222
+[1702762363.171832] Message sent from Node 1111 to Node 2222
+[1702762363.1719456] Message sent from Node 1111 to Node 3333
+[1702762363.1757488] Message received at Node 1111 from Node 2222
+Routing Table for Node 1111:
+- (.09) -> Node 2222 
+- (.26) -> Node 3333 ; Next hop -> Node 2222
+- (.88) -> Node 4444 ; Next hop -> Node 2222
+[1702762363.1772997] Message received at Node 1111 from Node 3333
+Routing Table for Node 1111:
+- (.09) -> Node 2222 
+- (.26) -> Node 3333 ; Next hop -> Node 2222
+[1702762363.1788192] Message received at Node 1111 from Node 2222
+Routing Table for Node 1111:
+- (.09) -> Node 2222 
+- (.26) -> Node 3333 ; Next hop -> Node 2222
+- (.76) -> Node 4444 ; Next hop -> Node 2222
+[1702762363.1800592] Message sent from Node 1111 to Node 2222
+- (.76) -> Node 4444 ; Next hop -> Node 2222
+[1702762363.180416] Message sent from Node 1111 to Node 3333
+[1702762363.1917913] Message received at Node 1111 from Node 3333
+Routing Table for Node 1111:
+- (.09) -> Node 2222 
+- (.26) -> Node 3333 ; Next hop -> Node 2222
+- (.76) -> Node 4444 ; Next hop -> Node 2222
+[1702762363.980] Link to 2222: 554 packets sent,  50 packets lost, loss rate 0.090
+[1702762364.981] Link to 3333: 655 packets sent,  340 packets lost, loss rate 0.520
+[1702762365.1766613] Message received at Node 1111 from Node 3333
+Routing Table for Node 1111:
+- (.09) -> Node 2222 
+- (.26) -> Node 3333 ; Next hop -> Node 2222
+- (.76) -> Node 4444 ; Next hop -> Node 2222
+
+Terminal 2
+
+[1702762363.1776366] Message sent from Node 2222 to Node 1111
+[1702762363.17791] Message sent from Node 2222 to Node 3333
+[1702762363.1780682] Message sent from Node 2222 to Node 4444
+[1702762363.180591] Message received at Node 2222 from Node 1111
+Routing Table for Node 2222:
+- (.09) -> Node 1111 
+- (.17) -> Node 3333 
+- (.67) -> Node 4444 ; Next hop -> Node 3333
+[1702762363.185681] Message received at Node 2222 from Node 3333
+Routing Table for Node 2222:
+- (.09) -> Node 1111 
+- (.17) -> Node 3333 
+- (.67) -> Node 4444 ; Next hop -> Node 3333
+[1702762363.197435] Message received at Node 2222 from Node 4444
+Routing Table for Node 2222:
+- (.09) -> Node 1111 
+- (.17) -> Node 3333 
+- (.67) -> Node 4444 ; Next hop -> Node 3333
+[1702762363.446126] Message received at Node 2222 from Node 4444
+Routing Table for Node 2222:
+- (.09) -> Node 1111 
+- (.17) -> Node 3333 
+- (.67) -> Node 4444 ; Next hop -> Node 3333
+[1702762363.982] Link to 3333: 580 packets sent,  101 packets lost, loss rate 0.170
+[1702762365.171] Link to 4444: 694 packets sent,  546 packets lost, loss rate 0.790
+[1702762365.1766238] Message received at Node 2222 from Node 3333
+Routing Table for Node 2222:
+- (.09) -> Node 1111 
+- (.17) -> Node 3333 
+- (.67) -> Node 4444 ; Next hop -> Node 3333
+[1702762366.172] Link to 3333: 590 packets sent,  101 packets lost, loss rate 0.170
+[1702762367.173] Link to 4444: 705 packets sent,  554 packets lost, loss rate 0.790
+[1702762368.174] Link to 3333: 600 packets sent,  102 packets lost, loss rate 0.170
+
+Terminal 3
+1702762361.172] Link to 4444: 666 packets sent,  333 packets lost, loss rate 0.500
+[1702762362.173] Link to 4444: 673 packets sent,  337 packets lost, loss rate 0.500
+[1702762362.979763] Message received at Node 3333 from Node 1111
+[1702762362.9805365] Message received at Node 3333 from Node 1111
+Routing Table for Node 3333:
+- (.23) -> Node 1111 ; Next hop -> Node 2222
+- (.17) -> Node 2222 
+- (.5) -> Node 4444 
+Routing Table for Node 3333:
+- (.23) -> Node 1111 ; Next hop -> Node 2222
+- (.17) -> Node 2222 
+- (.5) -> Node 4444 
+[1702762363.172731] Message sent from Node 3333 to Node 1111
+[1702762363.172797] Message sent from Node 3333 to Node 2222
+[1702762363.1728535] Message sent from Node 3333 to Node 4444
+[1702762362.9818] Message received at Node 3333 from Node 2222
+Routing Table for Node 3333:
+- (.23) -> Node 1111 ; Next hop -> Node 2222
+- (.17) -> Node 2222 
+- (.5) -> Node 4444 
+[1702762363.1735792] Message received at Node 3333 from Node 2222
+Routing Table for Node 3333:
+- (.23) -> Node 1111 ; Next hop -> Node 2222
+[1702762363.174] Link to 4444: 680 packets sent,  339 packets lost, loss rate 0.500
+- (.17) -> Node 2222 
+- (.5) -> Node 4444 
+
+Terminal 4
+[1702762363.1881397] Message received at Node 4444 from Node 2222
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333
+[1702762363.202357] Message sent from Node 4444 to Node 2222
+[1702762363.208022] Message received at Node 4444 from Node 3333
+[1702762363.2133906] Message sent from Node 4444 to Node 3333
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333
+[1702762363.2240915] Message received at Node 4444 from Node 2222
+[1702762363.4269264] Message received at Node 4444 from Node 3333
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333
+[1702762363.4454074] Message sent from Node 4444 to Node 2222
+[1702762363.4455044] Message sent from Node 4444 to Node 3333
+[1702762365.2020745] Message received at Node 4444 from Node 3333
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333
+[1702762370.1983097] Message received at Node 4444 from Node 3333
+Routing Table for Node 4444:
+- (.66) -> Node 2222 ; Next hop -> Node 3333
+- (.5) -> Node 3333 
+- (.73) -> Node 1111 ; Next hop -> Node 3333

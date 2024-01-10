@@ -1,5 +1,5 @@
 # ChatRoom
-Programming Project. Designed protocols on UDP. Enables person to person chatting, broadcast , GBN, and Bellman ford routing.
+Programming Project. Designed protocols on UDP. Enables person to person chatting, broadcast online/offline messages, GBN, and Bellman ford routing.
 
 ## Packet structure
 

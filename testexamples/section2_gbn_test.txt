@@ -1,0 +1,240 @@
+Test1: Normal test
+In this case , the first send is very lucky and no packet lost.
+The second send shows the capacty to handle duplicate ACK(line 28) and the ACK3 can skip ACK2 and move the window correctly.(line33)
+The sender also knows it sends all in line 17 and line 34 by indicating the moving is stoped.
+However the receiver should not know because it can only know it should stop when sender sends it a close packet.
+This case also shows my additional feature for multiple inputs
+The third test shows time out and 
+The plused test(in some old version of my gbn but should still works for the new one) shows that the final converge using long sentence should converge to p.
+
+NODE 1111(sender, send 2 times below):(the prompts for receiver after summary may not correct(no node> because not refresh), but you can use send xxxx to send again.)
+
+wl2928@csee4119-instance-wl2928:~$ python3 ./gbnnode.py 1111 2222 3 -p 0.2
+node> send abcde
+[1702758506.628] packet0 a sent
+[1702758506.648] packet1 b sent
+[1702758506.668] packet2 c sent
+[1702758506.630] ACK0 received, move window to 1
+[1702758506.649] ACK1 received, move window to 2
+[1702758506.669] ACK2 received, move window to 3
+[1702758507.251] packet3 d sent
+[1702758507.271] packet4 e sent
+[1702758507.252] ACK3 received, move window to 4
+[1702758507.272] ACK4 received, move window to 4
+[Summary] 0/5 packets dropped, loss rate = 0.000
+node> send abcde
+[1702758524.472] packet0 a sent
+[1702758524.493] packet1 b sent
+[1702758524.494] ACK1 discarded
+[1702758524.513] packet2 c sent
+[1702758524.474] ACK0 received, move window to 1
+[1702758525.054] packet1 b sent
+[1702758525.075] packet2 c sent
+[1702758525.095] packet3 d sent
+[1702758525.055] ACK1 received, move window to 2
+[1702758525.096] ACK1 received, move window to 2
+[1702758525.657] packet2 c sent
+[1702758525.658] ACK2 discarded
+[1702758525.677] packet3 d sent
+[1702758525.697] packet4 e sent
+[1702758525.678] ACK3 received, move window to 4
+[1702758525.698] ACK4 received, move window to 4
+[Summary] 2/7 packets dropped, loss rate = 0.286
+
+NODE 2222:
+wl2928@csee4119-instance-wl2928:~$  python3 ./gbnnode.py 2222 1111 3 -p 0.2
+[1702758506.628] packet0 a received
+[1702758506.629] ACK0 sent, expecting 1
+[1702758506.648] packet1 b received
+[1702758506.649] ACK1 sent, expecting 2
+[1702758506.669] packet2 c received
+[1702758506.669] ACK2 sent, expecting 3
+[1702758507.251] packet3 d received
+[1702758507.251] ACK3 sent, expecting 4
+[1702758507.271] packet4 e received
+[1702758507.272] ACK4 sent, expecting 5
+[Summary] 0/5 packets dropped, loss rate = 0.000
+[1702758524.473] packet0 a received
+[1702758524.473] ACK0 sent, expecting 1
+[1702758524.493] packet1 b received
+[1702758524.494] ACK1 sent, expecting 2
+[1702758524.514] packet2 c discarded
+[1702758525.055] packet1 b received
+[1702758525.055] ACK1 sent, expecting 2
+[1702758525.075] packet2 c discarded
+[1702758525.096] packet3 d received
+[1702758525.096] ACK1 sent, expecting 2
+[1702758525.657] packet2 c received
+[1702758525.658] ACK2 sent, expecting 3
+[1702758525.677] packet3 d received
+[1702758525.678] ACK3 sent, expecting 4
+[1702758525.698] packet4 e received
+[1702758525.698] ACK4 sent, expecting 5
+[Summary] 2/9 packets dropped, loss rate = 0.222
+
+Test:(time out,The print info is somehow wrong, ACK0 should arrive before ACK1, see their time stamps)
+NODE1111
+wl2928@csee4119-instance-wl2928:~$ python3 ./gbnnode.py 1111 2222 3 -p 0.2
+node> send abcde
+[1702758712.293] packet0 a sent
+[1702758712.313] packet1 b sent
+[1702758712.334] packet2 c sent
+[1702758712.855] packet2 timeout
+[1702758712.855] packet0 a sent
+[1702758712.876] packet1 b sent
+[1702758712.896] packet2 c sent
+[1702758713.418] packet2 timeout
+[1702758713.418] packet0 a sent
+[1702758713.438] packet1 b sent
+[1702758713.439] ACK1 discarded
+[1702758713.459] packet2 c sent
+[1702758713.419] ACK0 received, move window to 1
+[1702758713.460] ACK2 received, move window to 3
+[1702758714.021] packet3 d sent
+[1702758714.041] packet4 e sent
+[1702758714.042] ACK2 received, move window to 3
+[1702758714.582] packet3 d sent
+[1702758714.603] packet4 e sent
+[1702758714.583] ACK3 received, move window to 4
+[1702758715.144] packet4 e sent
+[1702758715.665] packet4 timeout
+[1702758715.665] packet4 e sent
+[1702758715.666] ACK4 received, move window to 4
+[Summary] 1/6 packets dropped, loss rate = 0.167
+
+NODE2222
+wl2928@csee4119-instance-wl2928:~$ python3 ./gbnnode.py 2222 1111 3 -p 0.2
+[1702758712.294] packet0 a discarded
+[1702758712.314] packet1 b received
+[1702758712.335] packet2 c received
+[1702758712.856] packet0 a discarded
+[1702758712.876] packet1 b received
+[1702758712.897] packet2 c discarded
+[1702758713.418] packet0 a received
+[1702758713.419] ACK0 sent, expecting 1
+[1702758713.439] packet1 b received
+[1702758713.439] ACK1 sent, expecting 2
+[1702758713.459] packet2 c received
+[1702758713.460] ACK2 sent, expecting 3
+[1702758714.021] packet3 d discarded
+[1702758714.041] packet4 e received
+[1702758714.042] ACK2 sent, expecting 3
+[1702758714.583] packet3 d received
+[1702758714.583] ACK3 sent, expecting 4
+[1702758714.603] packet4 e discarded
+[1702758715.145] packet4 e discarded
+[1702758715.666] packet4 e received
+[1702758715.666] ACK4 sent, expecting 5
+[Summary] 6/15 packets dropped, loss rate = 0.400
+
+Test -d also shows the receiver can be sender after sending.
+
+wl2928@csee4119-instance-wl2928:~$ python3 ./gbnnode.py 1111 2222 3 -d 5
+node>send abcde
+[1702761358.057] packet0 a sent
+[1702761358.077] packet1 b sent
+[1702761358.098] packet2 c sent
+[1702761358.058] ACK0 received, move window to 1
+[1702761358.078] ACK1 received, move window to 2
+[1702761358.099] ACK2 received, move window to 3
+[1702761358.680] packet3 d sent
+[1702761358.701] packet4 e sent
+[1702761358.702] ACK2 discarded
+[1702761359.221] packet4 timeout
+[1702761359.222] packet3 d sent
+[1702761359.242] packet4 e sent
+[1702761359.223] ACK3 received, move window to 4
+[1702761359.243] ACK4 received, move window to 4
+[Summary] 1/6 packets dropped, loss rate = 0.167
+node>send abcdefg
+[1702761365.279] packet0 a sent
+[1702761365.299] packet1 b sent
+[1702761365.319] packet2 c sent
+[1702761365.280] ACK0 received, move window to 1
+[1702761365.300] ACK1 received, move window to 2
+[1702761365.321] ACK2 received, move window to 3
+[1702761365.901] packet3 d sent
+[1702761365.922] packet4 e sent
+[1702761365.923] ACK2 discarded
+[1702761365.942] packet5 f sent
+[1702761365.944] ACK2 received, move window to 3
+[1702761366.484] packet3 d sent
+[1702761366.505] packet4 e sent
+[1702761366.525] packet5 f sent
+[1702761366.485] ACK3 received, move window to 4
+[1702761366.506] ACK4 received, move window to 5
+[1702761367.087] packet5 f sent
+[1702761367.107] packet6 g sent
+[1702761367.108] ACK6 discarded
+[1702761367.087] ACK5 received, move window to 6
+[1702761367.649] packet6 g sent
+[1702761367.650] ACK6 received, move window to 6
+[Summary] 2/10 packets dropped, loss rate = 0.200
+node>[1702761373.167] packet0 a received
+[1702761373.168] ACK0 sent, expecting 1
+[1702761373.187] packet1 a received
+[1702761373.188] ACK1 sent, expecting 2
+[1702761373.208] packet2 a received
+[1702761373.208] ACK2 sent, expecting 3
+[1702761373.790] packet3 a discarded
+[1702761374.311] packet3 a received
+[1702761374.311] ACK3 sent, expecting 4
+[1702761374.832] packet3 a received
+[1702761374.832] ACK3 sent, expecting 4
+[Summary] 1/6 packets dropped, loss rate = 0.167
+
+
+wl2928@csee4119-instance-wl2928:~$ python3 ./gbnnode.py 2222 1111 3 -d 5
+node>[1702761358.057] packet0 a received
+[1702761358.058] ACK0 sent, expecting 1
+[1702761358.078] packet1 b received
+[1702761358.078] ACK1 sent, expecting 2
+[1702761358.098] packet2 c received
+[1702761358.098] ACK2 sent, expecting 3
+[1702761358.681] packet3 d discarded
+[1702761358.701] packet4 e received
+[1702761358.702] ACK2 sent, expecting 3
+[1702761359.222] packet3 d received
+[1702761359.222] ACK3 sent, expecting 4
+[1702761359.242] packet4 e received
+[1702761359.243] ACK4 sent, expecting 5
+[Summary] 1/7 packets dropped, loss rate = 0.143
+[1702761365.279] packet0 a received
+[1702761365.280] ACK0 sent, expecting 1
+[1702761365.300] packet1 b received
+[1702761365.300] ACK1 sent, expecting 2
+[1702761365.320] packet2 c received
+[1702761365.321] ACK2 sent, expecting 3
+[1702761365.902] packet3 d discarded
+[1702761365.922] packet4 e received
+[1702761365.922] ACK2 sent, expecting 3
+[1702761365.943] packet5 f received
+[1702761365.943] ACK2 sent, expecting 3
+[1702761366.484] packet3 d received
+[1702761366.485] ACK3 sent, expecting 4
+[1702761366.505] packet4 e received
+[1702761366.506] ACK4 sent, expecting 5
+[1702761366.525] packet5 f discarded
+[1702761367.087] packet5 f received
+[1702761367.087] ACK5 sent, expecting 6
+[1702761367.108] packet6 g received
+[1702761367.108] ACK6 sent, expecting 7
+[1702761367.649] packet6 g received
+[1702761367.650] ACK6 sent, expecting 7
+[Summary] 2/12 packets dropped, loss rate = 0.167
+send aaaa
+[1702761373.167] packet0 a sent
+[1702761373.187] packet1 a sent
+[1702761373.207] packet2 a sent
+[1702761373.168] ACK0 received, move window to 1
+[1702761373.188] ACK1 received, move window to 2
+[1702761373.208] ACK2 received, move window to 3
+[1702761373.789] packet3 a sent
+[1702761374.310] packet3 timeout
+[1702761374.310] packet3 a sent
+[1702761374.312] ACK3 discarded
+[1702761374.831] packet3 timeout
+[1702761374.832] packet3 a sent
+[1702761374.832] ACK3 received, move window to 3
+[Summary] 1/5 packets dropped, loss rate = 0.200
+node>  
