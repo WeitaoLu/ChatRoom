@@ -8,7 +8,7 @@ there are some control data bit. \x00 is ACK. \x02 is a mseg to close receiver. 
 
 ## Functions and Classes.
 
-# GBNNode:
+### GBNNode:
     packet2buffer:
     This is the main thread. Which packs and pushes packets into sending buffer. Start sending_window and print summary when sending ends.
 
@@ -28,7 +28,7 @@ there are some control data bit. \x00 is ACK. \x02 is a mseg to close receiver. 
     When the packet is not ack, it will sending an ack to the sender.
     when the packet is \x02 or \x03. it will inform the sender/receiver the sending process is end, and initialize both for further transmission.
 
---DVnode:
+### DVnode:
     send_routing_table:
     send routing_table to all neighbours.
 
@@ -40,7 +40,7 @@ there are some control data bit. \x00 is ACK. \x02 is a mseg to close receiver. 
     based on Bellman-Ford Algorithm to update local routing table based on the sent one.
 
 
---CNnode:
+### CNnode:
     This is a complex combination of GBNNode and DVnode. The difference in functions are highlighted below.
 
     In this section, every connenction has an independent sequence number for sending and an independent sequence number for ack.
@@ -62,24 +62,72 @@ there are some control data bit. \x00 is ACK. \x02 is a mseg to close receiver. 
     check_neighbour_consistency: This is used to check the consistency between self.neighbours and self.routing_table. 
 
     self.neighbors is used to store the calculated/received distance between the nodes and its neighbors.
+### HOW TO USE ChataAPP
+Fllow the commands as shown in testexamples.
 
-– An overview of any data structures used
-    In Section2, sending buffer is simply a list. In section 4 , it's a fixed 10 size array.
+### HOW TO USE ChataAPP
+Set up:
+CD to root
+Run Server:  ./ChatApp -s <port>
+Run Client: ./ChatApp -c <name> <server-ip> <server-port> <client-port>
 
-    In section2, sequence number is just an int, so one node can connected to multiple nodes at same time but can only sending/receiving from one node.
-    In section4, I improved this so one node can sending/recieving to multiple nodes at the same time with no conflict.
-    The nodes has a sequence number array for all its neightbors, also an independent receive buffer.
+Ctrl+C: exit Server/Client
 
-    The recieve buffer is designed because the reply of the receive is too fast and packets may lost while the 
-    receive_packet thread is parasing, alloacating and handling the packet. I noticed this problem and applied a buffer to solve it.
-    It will not break the recieve order of the packets, just to ensure packet can be dropped only on our Emulation method.
+The following commands are for clients only:
+Communicate Command:
+send message to 1 clients: send <name> <message>
+broadcast message to all clients: send_all <message>
 
-– Any bugs that remain in your submission
-    The print information sometimes is reordered and not according to the timestamp because they are in different thread.
-    Refer to the timestamp if there's conflict
-    As far as I know, I tested all sections both locally and on Google Cloud in Ubtuntu 20.04
-    using the test case provided in the PDF and every test is passed and converges well.
-    Since I only used a limited test cases,there may be some case I missed and unexpected errors.
+De-register://only can be used when active,will turn the state to idle
+dereg
 
-    I don't add any input constraints, and any logic in the rubric is programmed and tested.
+Re-register://only can be used when idle
+reg
+
+## Function definitions
+
+### Class ChatServer contains:
+    
+    _init_ : function to initiate basic settings including name,port,etc.
+    start: main function. initiate receive thread and do forever while loop to keep server active.
+
+### Thread Functions:
+    receive_messages:thread to receive message and allocate it to other thread to response.
+    handle_registration: thread to handle reg request of new client, old client ,and re-reg client.
+    handle_deregistration: thread to handle dereg request
+    handle_offline:thread to handle offline msgs sent to server and decide if need to store it.
+    handle_groupchat:thread to handle send_all request.Send to all active users and store for all offline users.
+
+### Tools Functions:(to be used in different threads and make programming easier)
+    send_message_to_client_byaddress: given an address, send to client.
+    send_message_to_client_byname: given a name, look up address and send to client.
+    get_address_by_name:look up address using name.Useful in many functions.
+    get_name_by_address:look up name using address.Useful in many functions.
+    send_ACK:send ACK to 1 client.
+    synstate_to_client:synchronize client table with one client.
+    broadcastsyn:synchronize client table with all online client.
+
+### Class ChatClient contains:
+
+    _init_:function to initiate basic settings including name,port,etc.
+    start: main function. initiate receive thread and do forever while loop to keep server active.
+    There are two states in start, True means client is active and False means client is deregistered.
+    The while loop in start also handles input. Once a input is typed by user,it will be checked and allocate to thread to solve it.
+
+### Tool Functions:(to used in other threads and start function)
+    check_command: a function to check Valid Commands.
+    send_message: send message to a target address.
+    send_ACK: send ACK to a a target address.
+
+### Thread Functions:
+    receive_messages:thread to receive , only active when client state is active(online).receive message then print outputs and send ACKs.
+    process_sending_client_command:thread to send message to 1 client.If timeout send to server a offline_message.
+    process_sending_all_command:thread to send message to server and let it send to all online and offline users in client table.
+    process_sending_offline_command:tool to send offline message to server and check ack state.
+    process_dereg_command:thread to solve dereg command,tell server and wait for ack.
+    regagain:change state from dereg(offline) state to active(online) state. send reg to server.
+    string_to_tuple:tool to change a 'tuple-like' string to tuple. 
+    Useful in syn client tables because my key is tuple and when Server send it it becomes string.
+
+
 
